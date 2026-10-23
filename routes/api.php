@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
 use App\Http\Controllers\Api\MasterKandang\MasterKandangController;
 use App\Http\Controllers\Api\MasterLokasi\MasterLokasiController;
+use App\Http\Controllers\Api\PeriodeClosing\PeriodeClosingController;
 use App\Http\Controllers\Api\TransaksiAyamBulanan\TransaksiAyamBulananController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;    
@@ -78,6 +79,14 @@ Route::prefix('master-lokasi')->group(function () {
     Route::get('/{masterLokasi}', [MasterLokasiController::class, 'show']);
     Route::put('/{masterLokasi}', [MasterLokasiController::class, 'update']);
     Route::delete('/{masterLokasi}', [MasterLokasiController::class, 'destroy']);
+});
+
+Route::prefix('periode-closing')->group(function () {
+    Route::get('/', [PeriodeClosingController::class, 'index']);
+    Route::post('/', [PeriodeClosingController::class, 'store']);
+    Route::get('/{periodeClosing}', [PeriodeClosingController::class, 'show']);
+    Route::put('/{periodeClosing}', [PeriodeClosingController::class, 'update']);
+    Route::delete('/{periodeClosing}', [PeriodeClosingController::class, 'destroy']);
 });
 
 Route::prefix('transaksi-ayam-bulanan')->group(function () {
