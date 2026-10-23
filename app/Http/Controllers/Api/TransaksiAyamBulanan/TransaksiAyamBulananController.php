@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Http\Controllers\Api\TransaksiAyamBulanan;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\TransaksiAyamBulanan\StoreTransaksiAyamBulananRequest;
+use App\Http\Requests\TransaksiAyamBulanan\UpdateTransaksiAyamBulananRequest;
+use App\Http\Resources\TransaksiAyamBulananResource;
+use App\Models\TransaksiAyamBulanan;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class TransaksiAyamBulananController extends Controller
+{
+    private const RELATIONS = ['periode', 'kandang.lokasi', 'masterAyam'];
+
+    public function index(Request $request): JsonResponse
+    {
+        $query = TransaksiAyamBulanan::query()->with(self::RELATIONS);
+
+        foreach (['periode_id', 'kandang_id', 'master_ayam_id'] as $field) {
+            if ($request->filled($field)) {
+                $query->where($field, $request->integer($field));
+            }
+        }
+
+        if ($request->filled('flock_no')) {
+            $query->where('flock_no', 'ilike', '%' . $request->flock_no . '%');
+        }
+
+        $perPage = min(max($request->integer('per_page', 25), 1), 200);
+
+        return TransaksiAyamBulananResource::collection(
+            $query->orderByDesc('periode_id')
+                ->orderBy('kandang_id')
+                ->orderBy('master_ayam_id')
+                ->paginate($perPage)
+        )->additional(['success' => true])->response();
+    }
+
+    public function store(StoreTransaksiAyamBulananRequest $request): JsonResponse
+    {
+        $transaksi = TransaksiAyamBulanan::create($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transaksi ayam bulanan berhasil dibuat.',
+            'data' => new TransaksiAyamBulananResource($transaksi->load(self::RELATIONS)),
+        ], 201);
+    }
+
+    public function show(TransaksiAyamBulanan $transaksiAyamBulanan): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => new TransaksiAyamBulananResource($transaksiAyamBulanan->load(self::RELATIONS)),
+        ]);
+    }
+
+    public function update(
+        UpdateTransaksiAyamBulananRequest $request,
+        TransaksiAyamBulanan $transaksiAyamBulanan
+    ): JsonResponse {
+        $transaksiAyamBulanan->update($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transaksi ayam bulanan berhasil diupdate.',
+            'data' => new TransaksiAyamBulananResource($transaksiAyamBulanan->fresh(self::RELATIONS)),
+        ]);
+    }
+
+    public function destroy(TransaksiAyamBulanan $transaksiAyamBulanan): JsonResponse
+    {
+        if ($transaksiAyamBulanan->alokasiBiaya()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaksi sudah punya alokasi biaya. Hapus alokasinya terlebih dahulu.',
+            ], 409);
+        }
+
+        $transaksiAyamBulanan->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transaksi ayam bulanan berhasil dihapus.',
+        ]);
+    }
+}
