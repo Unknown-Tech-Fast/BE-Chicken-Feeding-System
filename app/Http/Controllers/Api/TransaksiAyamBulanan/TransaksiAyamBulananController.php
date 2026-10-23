@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 class TransaksiAyamBulananController extends Controller
 {
     private const RELATIONS = ['periode', 'kandang.lokasi', 'masterAyam'];
-
+   
     public function index(Request $request): JsonResponse
     {
         $query = TransaksiAyamBulanan::query()->with(self::RELATIONS);
@@ -28,15 +28,29 @@ class TransaksiAyamBulananController extends Controller
             $query->where('flock_no', 'ilike', '%' . $request->flock_no . '%');
         }
 
-        $perPage = min(max($request->integer('per_page', 25), 1), 200);
+        $perPage = max(1, min($request->integer('per_page', 25), 200));
 
-        return TransaksiAyamBulananResource::collection(
-            $query->orderByDesc('periode_id')
-                ->orderBy('kandang_id')
-                ->orderBy('master_ayam_id')
-                ->paginate($perPage)
-        )->additional(['success' => true])->response();
+        $transaksi = $query
+            ->orderByDesc('periode_id')
+            ->orderBy('kandang_id')
+            ->orderBy('master_ayam_id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return response()->json([
+            'success' => true,
+            'data' => TransaksiAyamBulananResource::collection($transaksi->items()),
+            'pagination' => [
+                'current_page' => $transaksi->currentPage(),
+                'per_page' => $transaksi->perPage(),
+                'total' => $transaksi->total(),
+                'last_page' => $transaksi->lastPage(),
+                'from' => $transaksi->firstItem(),
+                'to' => $transaksi->lastItem(),
+            ],
+        ]);
     }
+
 
     public function store(StoreTransaksiAyamBulananRequest $request): JsonResponse
     {

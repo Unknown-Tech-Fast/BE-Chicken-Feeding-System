@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 
 class MasterLokasiController extends Controller
 {
+   
     public function index(Request $request): JsonResponse
     {
         $query = MasterLokasi::query()
@@ -27,19 +28,30 @@ class MasterLokasiController extends Controller
         }
 
         if ($request->has('is_active')) {
-            $query->where(
-                'is_active',
-                $request->boolean('is_active')
-            );
+            $query->where('is_active', $request->boolean('is_active'));
         }
+
+        $perPage = max(1, min($request->integer('per_page', 10), 100));
+
+        $lokasi = $query
+            ->orderBy('kode_lokasi')
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'success' => true,
-            'data' => MasterLokasiResource::collection(
-                $query->orderBy('kode_lokasi')->get()
-            ),
+            'data' => MasterLokasiResource::collection($lokasi->items()),
+            'pagination' => [
+                'current_page' => $lokasi->currentPage(),
+                'per_page' => $lokasi->perPage(),
+                'total' => $lokasi->total(),
+                'last_page' => $lokasi->lastPage(),
+                'from' => $lokasi->firstItem(),
+                'to' => $lokasi->lastItem(),
+            ],
         ]);
     }
+
 
     public function store(
         StoreMasterLokasiRequest $request

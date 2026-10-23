@@ -12,29 +12,45 @@ use Illuminate\Http\Request;
 
 class MasterKandangController extends Controller
 {
-    public function index(Request $request): JsonResponse
-    {
-        $query = MasterKandang::query()->with('lokasi');
+   
+public function index(Request $request): JsonResponse
+{
+    $query = MasterKandang::query()->with('lokasi');
 
-        if ($request->filled('search')) {
-            $query->where('kode_kandang', 'ilike', '%' . $request->search . '%');
-        }
-
-        if ($request->filled('lokasi_id')) {
-            $query->where('lokasi_id', $request->integer('lokasi_id'));
-        }
-
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => MasterKandangResource::collection(
-                $query->orderBy('lokasi_id')->orderBy('kode_kandang')->get()
-            ),
-        ]);
+    if ($request->filled('search')) {
+        $query->where('kode_kandang', 'ilike', '%' . $request->search . '%');
     }
+
+    if ($request->filled('lokasi_id')) {
+        $query->where('lokasi_id', $request->integer('lokasi_id'));
+    }
+
+    if ($request->has('is_active')) {
+        $query->where('is_active', $request->boolean('is_active'));
+    }
+
+    $perPage = max(1, min($request->integer('per_page', 10), 100));
+
+    $kandang = $query
+        ->orderBy('lokasi_id')
+        ->orderBy('kode_kandang')
+        ->paginate($perPage)
+        ->withQueryString();
+
+    return response()->json([
+        'success' => true,
+        'data' => MasterKandangResource::collection($kandang->items()),
+        'pagination' => [
+            'current_page' => $kandang->currentPage(),
+            'per_page' => $kandang->perPage(),
+            'total' => $kandang->total(),
+            'last_page' => $kandang->lastPage(),
+            'from' => $kandang->firstItem(),
+            'to' => $kandang->lastItem(),
+        ],
+    ]);
+}
+
 
     public function store(StoreMasterKandangRequest $request): JsonResponse
     {

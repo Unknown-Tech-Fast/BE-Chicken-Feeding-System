@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 
 class MasterAyamController extends Controller
 {
+   
     public function index(Request $request): JsonResponse
     {
         $query = MasterAyam::query();
@@ -20,7 +21,7 @@ class MasterAyamController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('kode_fase', 'ilike', "%{$s}%")
-                  ->orWhere('nama_fase', 'ilike', "%{$s}%");
+                ->orWhere('nama_fase', 'ilike', "%{$s}%");
             });
         }
 
@@ -28,13 +29,27 @@ class MasterAyamController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
+        $perPage = max(1, min((int) $request->input('per_page', 10), 100));
+
+        $ayam = $query
+            ->orderBy('kode_fase')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return response()->json([
             'success' => true,
-            'data' => MasterAyamResource::collection(
-                $query->orderBy('kode_fase')->get()
-            ),
+            'data' => MasterAyamResource::collection($ayam->items()),
+            'pagination' => [
+                'current_page' => $ayam->currentPage(),
+                'per_page' => $ayam->perPage(),
+                'total' => $ayam->total(),
+                'last_page' => $ayam->lastPage(),
+                'from' => $ayam->firstItem(),
+                'to' => $ayam->lastItem(),
+            ],
         ]);
     }
+
 
     public function store(StoreMasterAyamRequest $request): JsonResponse
     {

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 
 class PeriodeClosingController extends Controller
 {
+ 
     public function index(Request $request): JsonResponse
     {
         $query = PeriodeClosing::query();
@@ -28,15 +29,28 @@ class PeriodeClosingController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        $perPage = max(1, min($request->integer('per_page', 10), 100));
+
+        $periode = $query
+            ->orderByDesc('tahun')
+            ->orderByDesc('bulan')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return response()->json([
             'success' => true,
-            'data' => PeriodeClosingResource::collection(
-                $query->orderByDesc('tahun')
-                    ->orderByDesc('bulan')
-                    ->get()
-            ),
+            'data' => PeriodeClosingResource::collection($periode->items()),
+            'pagination' => [
+                'current_page' => $periode->currentPage(),
+                'per_page' => $periode->perPage(),
+                'total' => $periode->total(),
+                'last_page' => $periode->lastPage(),
+                'from' => $periode->firstItem(),
+                'to' => $periode->lastItem(),
+            ],
         ]);
     }
+
 
     public function store(StorePeriodeClosingRequest $request): JsonResponse
     {
