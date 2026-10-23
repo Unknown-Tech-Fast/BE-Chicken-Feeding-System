@@ -3,8 +3,9 @@
 use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
+use App\Http\Controllers\Api\MasterKandang\MasterKandangController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Route;    
 
 Route::get('/test', function () {
     return response()->json([
@@ -59,4 +60,12 @@ Route::prefix('master-ayam')->group(function () {
     Route::get('/{masterAyam}', [MasterAyamController::class, 'show']);
     Route::put('/{masterAyam}', [MasterAyamController::class, 'update']);
     Route::delete('/{masterAyam}', [MasterAyamController::class, 'destroy']);
+});
+
+Route::prefix('master-kandang')->group(function () {
+    Route::get('/', [MasterKandangController::class, 'index']);
+    Route::post('/', [MasterKandangController::class, 'store']);
+    Route::get('/{MasterKandang}', [MasterKandangController::class, 'show']);
+    Route::put('/{MasterKandang}', [MasterKandangController::class, 'update']);
+    Route::delete('/{MasterKandang}', [MasterKandangController::class, 'destroy']);
 });
