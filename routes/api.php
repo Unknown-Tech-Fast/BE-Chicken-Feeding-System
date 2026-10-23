@@ -1,8 +1,8 @@
-
 <?php
 
 use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -53,3 +53,10 @@ Route::prefix('admin')
         );
     });
 
+Route::prefix('master-ayam')->group(function () {
+    Route::get('/', [MasterAyamController::class, 'index']);
+    Route::post('/', [MasterAyamController::class, 'store']);
+    Route::get('/{masterAyam}', [MasterAyamController::class, 'show']);
+    Route::put('/{masterAyam}', [MasterAyamController::class, 'update']);
+    Route::delete('/{masterAyam}', [MasterAyamController::class, 'destroy']);
+});
