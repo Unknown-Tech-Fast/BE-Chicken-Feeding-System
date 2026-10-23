@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
 use App\Http\Controllers\Api\MasterKandang\MasterKandangController;
+use App\Http\Controllers\Api\MasterLokasi\MasterLokasiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;    
 
@@ -68,4 +69,12 @@ Route::prefix('master-kandang')->group(function () {
     Route::get('/{MasterKandang}', [MasterKandangController::class, 'show']);
     Route::put('/{MasterKandang}', [MasterKandangController::class, 'update']);
     Route::delete('/{MasterKandang}', [MasterKandangController::class, 'destroy']);
+});
+
+Route::prefix('master-lokasi')->group(function () {
+    Route::get('/', [MasterLokasiController::class, 'index']);
+    Route::post('/', [MasterLokasiController::class, 'store']);
+    Route::get('/{MasterLokasi}', [MasterLokasiController::class, 'show']);
+    Route::put('/{MasterLokasi}', [MasterLokasiController::class, 'update']);
+    Route::delete('/{MasterLokasi}', [MasterLokasiController::class, 'destroy']);
 });
