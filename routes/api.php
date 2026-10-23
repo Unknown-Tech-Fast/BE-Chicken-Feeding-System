@@ -66,15 +66,15 @@ Route::prefix('master-ayam')->group(function () {
 Route::prefix('master-kandang')->group(function () {
     Route::get('/', [MasterKandangController::class, 'index']);
     Route::post('/', [MasterKandangController::class, 'store']);
-    Route::get('/{MasterKandang}', [MasterKandangController::class, 'show']);
-    Route::put('/{MasterKandang}', [MasterKandangController::class, 'update']);
-    Route::delete('/{MasterKandang}', [MasterKandangController::class, 'destroy']);
+    Route::get('/{masterKandang}', [MasterKandangController::class, 'show']);
+    Route::put('/{masterKandang}', [MasterKandangController::class, 'update']);
+    Route::delete('/{masterKandang}', [MasterKandangController::class, 'destroy']);
 });
 
 Route::prefix('master-lokasi')->group(function () {
     Route::get('/', [MasterLokasiController::class, 'index']);
     Route::post('/', [MasterLokasiController::class, 'store']);
-    Route::get('/{MasterLokasi}', [MasterLokasiController::class, 'show']);
-    Route::put('/{MasterLokasi}', [MasterLokasiController::class, 'update']);
-    Route::delete('/{MasterLokasi}', [MasterLokasiController::class, 'destroy']);
+    Route::get('/{masterLokasi}', [MasterLokasiController::class, 'show']);
+    Route::put('/{masterLokasi}', [MasterLokasiController::class, 'update']);
+    Route::delete('/{masterLokasi}', [MasterLokasiController::class, 'destroy']);
 });

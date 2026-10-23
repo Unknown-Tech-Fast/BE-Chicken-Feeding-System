@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\MasterKandang;
+namespace App\Http\Requests\MasterLokasi;
 
 use App\Models\MasterLokasi;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,29 +15,14 @@ class UpdateMasterLokasiRequest extends FormRequest
 
     public function rules(): array
     {
-        $masterLokasi = $this->route('masterLokasi');
-
-        $lokasiId = is_object($masterLokasi)
-            ? $masterLokasi->id
-            : $masterLokasi;
-
         return [
             'kode_lokasi' => [
-                'required',
-                'string',
-                'max:50',
+                'required', 'string', 'max:50',
                 Rule::unique('master_lokasi', 'kode_lokasi')
-                    ->ignore($lokasiId),
+                    ->ignore($this->route('masterLokasi')),
             ],
-            'nama_lokasi' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'is_active' => [
-                'sometimes',
-                'boolean',
-            ],
+            'nama_lokasi' => ['required', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 }
