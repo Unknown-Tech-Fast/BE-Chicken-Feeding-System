@@ -3,6 +3,7 @@
 
 use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\LedgerImportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,41 @@ Route::middleware('auth:sanctum')->group(function () {
             ],
         ]);
     });
+    Route::prefix('imports')
+        ->name('imports.')
+        ->group(function () {
+
+            // Upload Excel file
+            Route::post('/ledger', [
+                LedgerImportController::class,
+                'store',
+            ])
+                ->middleware('throttle:5,1')
+                ->name('ledger.store');
+
+            // Get import status and progress
+            Route::get('/ledger/{import}', [
+                LedgerImportController::class,
+                'show',
+            ])
+                ->whereNumber('import')
+                ->name('ledger.show');
+
+            // Get import errors
+            Route::get('/ledger/{import}/errors', [
+                LedgerImportController::class,
+                'errors',
+            ])
+                ->whereNumber('import')
+                ->name('ledger.errors');
+
+            // Get imported ledger entries
+            Route::get('/ledger-entries', [
+                LedgerImportController::class,
+                'entries',
+            ])
+                ->name('ledger.entries');
+        });
 });
 
 Route::prefix('admin')
@@ -52,4 +88,3 @@ Route::prefix('admin')
             [UserRoleController::class, 'updateRole']
         );
     });
-
