@@ -10,10 +10,10 @@ class JournalDetail extends Model
     protected $table = 'journal_detail';
 
     protected $fillable = [
-        'import_batch_id', 'sumber', 'sheet_sumber', 'tahun', 'bulan', 'field1',
+        'import_batch_id', 'sumber', 'sheet_sumber', 'tahun', 'bulan', 'tipe_transaksi',
         'divisi', 'lokasi_id', 'lokasi_raw', 'kandang_id', 'status',
         'tipe_internal', 'rekening_jenis', 'kode_coa', 'nama_coa', 'rekanan',
-        'label', 'referensi', 'nomor', 'tanggal', 'debit', 'kredit', 'mutasi',
+        'deskripsi_transaksi', 'referensi', 'nomor', 'tanggal', 'debit', 'kredit', 'mutasi',
     ];
 
     protected function casts(): array

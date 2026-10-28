@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->string('sheet_sumber', 30)->nullable(); // OVK, PAKAN.VOD, AYAM
             $table->unsignedSmallInteger('tahun');
             $table->unsignedSmallInteger('bulan');
-            $table->string('field1', 40)->nullable(); // PEMBELIAN / PEMAKAIAN
+            $table->string('tipe_transaksi', 40)->nullable(); // PEMBELIAN / PEMAKAIAN
             $table->string('divisi', 80)->nullable();
 
             $table->foreignId('lokasi_id')
@@ -42,7 +42,7 @@ return new class extends Migration {
             $table->string('kode_coa', 50);
             $table->string('nama_coa', 200);
             $table->string('rekanan', 200)->nullable();
-            $table->text('label')->nullable();
+            $table->text('deskripsi_transaksi')->nullable();
             $table->string('referensi', 150)->nullable();
             $table->string('nomor', 150)->nullable();
             $table->date('tanggal');
