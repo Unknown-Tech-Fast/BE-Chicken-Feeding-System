@@ -38,6 +38,7 @@ class SheetAyamPivotController extends Controller
                     'month_number',
                     'tipe_transaksi',
                     'location',
+                    'partner_name',
                     'mutasi',
                 ]);
 
@@ -46,22 +47,21 @@ class SheetAyamPivotController extends Controller
                     'message' => 'Data sheet AYAM tidak ditemukan.',
                 ], Response::HTTP_NOT_FOUND);
             }
+
             $locations = $entries
-                ->filter(function ($entry) {
-                    return $this->isPembelian(
-                        $entry->tipe_transaksi
-                    );
-                })
+                ->filter(fn ($entry) =>
+                    $this->isPembelian($entry->tipe_transaksi)
+                )
                 ->pluck('location')
-                ->filter(function ($location) {
-                    return trim((string) $location) !== '';
-                })
-                ->map(function ($location) {
-                    return trim((string) $location);
-                })
-                ->unique(function ($location) {
-                    return mb_strtolower($location);
-                })
+                ->filter(fn ($value) =>
+                    trim((string) $value) !== ''
+                )
+                ->map(fn ($value) =>
+                    trim((string) $value)
+                )
+                ->unique(fn ($value) =>
+                    mb_strtolower($value)
+                )
                 ->sort()
                 ->values();
 
@@ -70,26 +70,62 @@ class SheetAyamPivotController extends Controller
             );
 
             $exportRows = [];
-
-            $grandMatiJual = 0;
-            $grandPembelian = 0;
-
+            $grandMatiJual = 0.0;
+            $grandPembelian = 0.0;
             $grandLocationTotals = [];
 
             foreach ($locations as $location) {
-                $grandLocationTotals[$location] = 0;
+                $grandLocationTotals[$location] = 0.0;
+            }
+
+            $rekapData = [];
+            $rekapGrandTotal = array_fill(1, 12, 0.0);
+
+            foreach ($entries as $entry) {
+                if (!$this->isPembelian($entry->tipe_transaksi)) {
+                    continue;
+                }
+
+                $month = (int) $entry->month_number;
+
+                if ($month < 1 || $month > 12) {
+                    continue;
+                }
+
+                $partner = trim(
+                    (string) ($entry->partner_name ?? '')
+                );
+
+                if ($partner === '') {
+                    $partner = '(blank)';
+                }
+
+                $namaNpwp = $this->getNamaNpwp($partner);
+
+                $partnerKey = mb_strtolower($partner);
+
+                if (!isset($rekapData[$partnerKey])) {
+                    $rekapData[$partnerKey] = [
+                        'nama_npwp' => $namaNpwp,
+                        'partner_name' => $partner,
+                        'months' => array_fill(1, 12, 0.0),
+                    ];
+                }
+
+                $value = (float) ($entry->mutasi ?? 0);
+
+                $rekapData[$partnerKey]['months'][$month] += $value;
+                $rekapGrandTotal[$month] += $value;
             }
 
             foreach ($monthlyEntries->sortKeys() as $month => $rows) {
                 $matiJual = $rows
-                    ->filter(function ($entry) {
-                        return $this->isMatiJual(
-                            $entry->tipe_transaksi
-                        );
-                    })
-                    ->sum(function ($entry) {
-                        return (float) ($entry->mutasi ?? 0);
-                    });
+                    ->filter(fn ($entry) =>
+                        $this->isMatiJual($entry->tipe_transaksi)
+                    )
+                    ->sum(fn ($entry) =>
+                        (float) ($entry->mutasi ?? 0)
+                    );
 
                 $locationTotals = [];
 
@@ -98,16 +134,15 @@ class SheetAyamPivotController extends Controller
                         ->filter(function ($entry) use ($location) {
                             return $this->isPembelian(
                                 $entry->tipe_transaksi
-                            )
-                                && mb_strtolower(
-                                    trim((string) $entry->location)
-                                ) === mb_strtolower(
-                                    trim((string) $location)
-                                );
+                            ) && mb_strtolower(
+                                trim((string) $entry->location)
+                            ) === mb_strtolower(
+                                trim((string) $location)
+                            );
                         })
-                        ->sum(function ($entry) {
-                            return (float) ($entry->mutasi ?? 0);
-                        });
+                        ->sum(fn ($entry) =>
+                            (float) ($entry->mutasi ?? 0)
+                        );
                 }
 
                 $pembelianTotal = array_sum($locationTotals);
@@ -123,11 +158,8 @@ class SheetAyamPivotController extends Controller
                 }
 
                 $row[] = $pembelianTotal;
-
                 $row[] = 0;
-
                 $row[] = 0;
-
                 $row[] = $matiJual + $pembelianTotal;
 
                 $exportRows[] = $row;
@@ -156,11 +188,7 @@ class SheetAyamPivotController extends Controller
             $headerTop[] = '(blank) Total';
             $headerTop[] = 'Grand Total';
 
-            $headerBottom = [
-                '',
-                '',
-                '',
-            ];
+            $headerBottom = ['', '', ''];
 
             foreach ($locations as $location) {
                 $headerBottom[] = $location;
@@ -188,17 +216,65 @@ class SheetAyamPivotController extends Controller
 
             $exportRows[] = $grandRow;
 
+            $rekapRows = array_values($rekapData);
+
+            usort($rekapRows, function ($a, $b) {
+                $nameCompare = strcasecmp(
+                    $a['nama_npwp'],
+                    $b['nama_npwp']
+                );
+
+                if ($nameCompare !== 0) {
+                    return $nameCompare;
+                }
+
+                return strcasecmp(
+                    $a['partner_name'],
+                    $b['partner_name']
+                );
+            });
+
+            $formattedRekapRows = [];
+
+            foreach ($rekapRows as $item) {
+                $row = [
+                    $item['nama_npwp'],
+                    $item['partner_name'],
+                ];
+
+                for ($month = 1; $month <= 12; $month++) {
+                    $row[] = $item['months'][$month] ?? 0.0;
+                }
+
+                $formattedRekapRows[] = $row;
+            }
+
+            $grandRekapRow = [
+                'Grand Total',
+                '',
+            ];
+
+            for ($month = 1; $month <= 12; $month++) {
+                $grandRekapRow[] = $rekapGrandTotal[$month] ?? 0.0;
+            }
+
+            $formattedRekapRows[] = $grandRekapRow;
+
+            Log::info('Export AYAM rekap bulanan', [
+                'jumlah_baris' => count($formattedRekapRows),
+                'contoh_baris' => $formattedRekapRows[0] ?? null,
+            ]);
+
             $payload = [
                 'header_top' => $headerTop,
                 'header_bottom' => $headerBottom,
                 'export_rows' => $exportRows,
                 'location_count' => $locations->count(),
+                'rekap_rows' => $formattedRekapRows,
             ];
 
             $filename = isset($validated['import_id'])
-                ? 'pivot-ayam-import-'
-                    . $validated['import_id']
-                    . '.xlsx'
+                ? 'pivot-ayam-import-' . $validated['import_id'] . '.xlsx'
                 : 'pivot-ayam.xlsx';
 
             return Excel::download(
@@ -219,12 +295,25 @@ class SheetAyamPivotController extends Controller
         }
     }
 
+    private function getNamaNpwp(string $partner): string
+    {
+        $partner = trim($partner);
+
+        $partner = preg_replace(
+            '/^PT\.?\s*/i',
+            '',
+            $partner
+        );
+
+        $parts = explode(' - ', $partner, 2);
+
+        return trim($parts[0]);
+    }
+
     private function isMatiJual(mixed $type): bool
     {
-        $type = mb_strtoupper(trim((string) $type));
-
         return in_array(
-            $type,
+            mb_strtoupper(trim((string) $type)),
             [
                 'MATI/JUAL',
                 'MATI',
