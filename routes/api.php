@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Finance\SheetAyamPivotController;
 use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
 use App\Http\Controllers\Api\MasterKandang\MasterKandangController;
 use App\Http\Controllers\Api\MasterLokasi\MasterLokasiController;
@@ -9,7 +10,7 @@ use App\Http\Controllers\Api\PeriodeClosing\PeriodeClosingController;
 use App\Http\Controllers\Api\TransaksiAyamBulanan\TransaksiAyamBulananController;
 use App\Http\Controllers\Api\LedgerImportController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;    
+use Illuminate\Support\Facades\Route;
 
 Route::get('/test', function () {
     return response()->json([
@@ -139,4 +140,8 @@ Route::prefix('transaksi-ayam-bulanan')->group(function () {
     Route::get('/{transaksiAyamBulanan}', [TransaksiAyamBulananController::class, 'show']);
     Route::put('/{transaksiAyamBulanan}', [TransaksiAyamBulananController::class, 'update']);
     Route::delete('/{transaksiAyamBulanan}', [TransaksiAyamBulananController::class, 'destroy']);
+});
+
+Route::prefix('finance')->group(function () {
+    Route::get('/pivot/export/excel', [SheetAyamPivotController::class, 'export']);
 });
