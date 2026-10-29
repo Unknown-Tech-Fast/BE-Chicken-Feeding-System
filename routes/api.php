@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Finance\SheetAyamPivotController;
+use App\Http\Controllers\Api\Finance\SheetOvkPivotController;
 use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
 use App\Http\Controllers\Api\MasterKandang\MasterKandangController;
 use App\Http\Controllers\Api\MasterLokasi\MasterLokasiController;
@@ -144,4 +145,5 @@ Route::prefix('transaksi-ayam-bulanan')->group(function () {
 
 Route::prefix('finance')->group(function () {
     Route::get('/pivot/export/excel', [SheetAyamPivotController::class, 'export']);
+    Route::get('/ovk/export-pivot', [SheetOvkPivotController::class, 'export']);
 });

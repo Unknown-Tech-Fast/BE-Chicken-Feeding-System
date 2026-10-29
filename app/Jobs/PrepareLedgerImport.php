@@ -105,6 +105,7 @@ class PrepareLedgerImport implements ShouldQueue
             'processed_rows' => 0,
             'successful_rows' => 0,
             'failed_rows' => 0,
+            'skipped_rows' => 0,
         ]);
 
         foreach ($jobs as $job) {

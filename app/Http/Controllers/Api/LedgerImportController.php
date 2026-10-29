@@ -17,9 +17,6 @@ use Throwable;
 
 class LedgerImportController extends Controller
 {
-    /**
-     * Path file queue worker.
-     */
     private const QUEUE_WORKER_BAT =
         'D:\\UniServer-Reload-1.3.15\\www\\chicken-feeding-system\\Backend\\start-queue-worker.bat';
 
@@ -29,7 +26,6 @@ class LedgerImportController extends Controller
 
         $sha256 = hash_file('sha256', $file->getRealPath());
 
-        // Cegah upload file dengan konten identik.
         $existing = LedgerImport::where('file_sha256', $sha256)->first();
 
         if ($existing) {
@@ -39,7 +35,6 @@ class LedgerImportController extends Controller
             ], Response::HTTP_CONFLICT);
         }
 
-        // Simpan file Excel.
         $path = $file->store('ledger-imports', 'local');
 
         try {
@@ -56,10 +51,8 @@ class LedgerImportController extends Controller
             throw $e;
         }
 
-        // Minta Windows menjalankan file BAT.
         $workerTriggered = $this->triggerQueueWorker();
 
-        // Masukkan job import ke antrean Laravel.
         PrepareLedgerImport::dispatch($import->id)
             ->onQueue('default');
 
@@ -74,13 +67,6 @@ class LedgerImportController extends Controller
         ], Response::HTTP_ACCEPTED);
     }
 
-    /**
-     * Jalankan file BAT sebagai proses background di Windows.
-     *
-     * Catatan: method ini tidak memeriksa apakah worker lain
-     * sudah berjalan. Karena itu, hindari memanggilnya berulang
-     * kali jika BAT berisi loop worker tanpa akhir.
-     */
     private function triggerQueueWorker(): bool
     {
         $batPath = self::QUEUE_WORKER_BAT;
@@ -94,7 +80,6 @@ class LedgerImportController extends Controller
         }
 
         try {
-            // Start menjalankan CMD tanpa menunggu worker selesai.
             $command = 'start "" /B cmd.exe /c '
                 . escapeshellarg($batPath);
 
@@ -157,6 +142,7 @@ class LedgerImportController extends Controller
                 'processed_rows' => $ledgerImport->processed_rows,
                 'successful_rows' => $ledgerImport->successful_rows,
                 'failed_rows' => $ledgerImport->failed_rows,
+                'skipped_rows' => $ledgerImport->skipped_rows ?? 0,
                 'total_chunks' => $ledgerImport->total_chunks,
                 'processed_chunks' => $ledgerImport->processed_chunks,
                 'error_message' => $ledgerImport->error_message,
