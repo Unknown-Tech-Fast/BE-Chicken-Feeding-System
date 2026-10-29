@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PeriodeClosing\StorePeriodeClosingRequest;
 use App\Http\Requests\PeriodeClosing\UpdatePeriodeClosingRequest;
 use App\Http\Resources\PeriodeClosingResource;
+use App\Services\PeriodeClosingService;
 use App\Models\PeriodeClosing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,4 +101,34 @@ class PeriodeClosingController extends Controller
             'message' => 'Periode closing berhasil dihapus.',
         ]);
     }
+
+    public function aktif(PeriodeClosingService $service): JsonResponse
+    {
+        $periode = $service->getPeriodeAktif();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Periode aktif berhasil diambil.',
+            'data' => new PeriodeClosingResource($periode),
+        ]);
+    }
+
+ 
+    public function closing(
+        Request $request,
+        PeriodeClosing $periodeClosing,
+        PeriodeClosingService $service
+    ): JsonResponse {
+        $periode = $service->closing(
+            $periodeClosing->id,
+            (int) ($request->user()?->id ?? 0)
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Periode berhasil ditutup.',
+            'data' => new PeriodeClosingResource($periode),
+        ]);
+    }
+
 }
