@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -11,10 +10,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class SheetOvkExport implements
-    FromArray,
-    ShouldAutoSize,
-    WithEvents
+class SheetOvkExport implements FromArray, WithEvents
 {
     private array $payload;
 
@@ -25,54 +21,7 @@ class SheetOvkExport implements
 
     public function array(): array
     {
-        $summaryRows = $this->payload['summary_rows'] ?? [];
-        $detailRows = $this->payload['detail_rows'] ?? [];
-
-        $rows = $summaryRows;
-
-        $rows[] = [];
-        $rows[] = [];
-
-        $rows[] = [
-            'DETAIL OVK PER LOKASI, BULAN, DAN REKENING',
-        ];
-
-        $rows[] = [
-            'Akun Analitik/Akun Analitik',
-            'MONTH',
-            'Rekening/Kode',
-            'Rekening/Nama',
-            'Sum of MUTASI',
-        ];
-
-        foreach ($detailRows as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-
-            $firstColumn = trim((string) ($row[0] ?? ''));
-
-            if (
-                in_array(
-                    $firstColumn,
-                    [
-                        'Akun Analitik/Akun Analitik',
-                        'Akun Analitik/A',
-                    ],
-                    true
-                )
-            ) {
-                continue;
-            }
-
-            $rows[] = array_pad(
-                array_slice(array_values($row), 0, 5),
-                5,
-                null
-            );
-        }
-
-        return $rows;
+        return [];
     }
 
     public function registerEvents(): array
@@ -80,277 +29,255 @@ class SheetOvkExport implements
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-
                 $sheet->setTitle('OVK');
 
-                $summaryRows =
-                    $this->payload['summary_rows'] ?? [];
+                $summaryRows = $this->payload['summary_rows'] ?? [];
+                $detailRows = $this->payload['detail_rows'] ?? [];
 
-                $detailRows =
-                    $this->payload['detail_rows'] ?? [];
-
-                if (
-                    empty($summaryRows) ||
-                    empty($detailRows)
-                ) {
+                if (empty($summaryRows) && empty($detailRows)) {
                     return;
                 }
 
-                $summaryHeaderRow = 1;
-
-                $summaryLastRow = count($summaryRows);
-
-                $summaryLastColumn =
-                    Coordinate::stringFromColumnIndex(
-                        count($summaryRows[0])
-                    );
-
-                $detailTitleRow = $summaryLastRow + 2;
-
-                $detailHeaderRow = $detailTitleRow + 1;
-
-                $detailFirstRow = $detailHeaderRow + 1;
-
-                $detailLastRow =
-                    $detailHeaderRow + count($detailRows);
-
+                $summaryColCount = !empty($summaryRows[0]) ? count($summaryRows[0]) : 2;
+                $summaryLastColumn = Coordinate::stringFromColumnIndex($summaryColCount);
                 $detailLastColumn = 'E';
 
-                $this->styleHeader(
-                    $sheet,
-                    "A{$summaryHeaderRow}:{$summaryLastColumn}{$summaryHeaderRow}"
-                );
-
-
-                if ($summaryLastRow > 1) {
-                    $sheet->getStyle(
-                        "B2:{$summaryLastColumn}{$summaryLastRow}"
-                    )->getNumberFormat()
-                        ->setFormatCode(
-                            '#,##0;[Red]\(#,##0\);-'
-                        );
+                $summaryTitle = $this->payload['summary_title'] ?? 'RINGKASAN OVK PER BULAN DAN LOKASI';
+                $detailTitle = $this->payload['detail_title'] ?? 'DETAIL OVK PER LOKASI, BULAN, DAN REKENING';
+                $spacingRowsCount = (int) ($this->payload['table_spacing_rows'] ?? 3);
+                if ($spacingRowsCount < 2) {
+                    $spacingRowsCount = 3;
                 }
 
-                $this->styleGrandTotal(
-                    $sheet,
-                    "A{$summaryLastRow}:{$summaryLastColumn}{$summaryLastRow}"
-                );
+                // ==========================================
+                // 1. TABLE 1: RINGKASAN OVK PER BULAN & LOKASI
+                // ==========================================
+                $currentRow = 1;
 
+                // Section Title: Ringkasan
+                $sheet->setCellValue("A{$currentRow}", $summaryTitle);
+                $sheet->mergeCells("A{$currentRow}:{$summaryLastColumn}{$currentRow}");
+                $this->styleSectionTitle($sheet, "A{$currentRow}:{$summaryLastColumn}{$currentRow}", '2F5597');
+                $sheet->getRowDimension($currentRow)->setRowHeight(26);
 
-                $sheet->setCellValue(
-                    "A{$detailTitleRow}",
-                    'DETAIL OVK PER LOKASI, BULAN, DAN REKENING'
-                );
+                $currentRow++; // Row 2: Summary Header
+                $summaryHeaderRow = $currentRow;
+                $sheet->fromArray($summaryRows, null, "A{$summaryHeaderRow}");
 
-                $sheet->getStyle(
-                    "A{$detailTitleRow}:{$detailLastColumn}{$detailTitleRow}"
-                )->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 12,
-                        'color' => [
-                            'rgb' => 'FFFFFF',
-                        ],
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => [
-                            'rgb' => '4472C4',
-                        ],
-                    ],
-                    'alignment' => [
-                        'vertical' =>
-                        Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
+                // Summary Row Count & Last Row
+                $summaryRowCount = count($summaryRows);
+                $summaryLastRow = $summaryHeaderRow + $summaryRowCount - 1;
 
-                $sheet->mergeCells(
-                    "A{$detailTitleRow}:{$detailLastColumn}{$detailTitleRow}"
-                );
+                // Style Summary Header
+                $this->styleHeader($sheet, "A{$summaryHeaderRow}:{$summaryLastColumn}{$summaryHeaderRow}");
+                $sheet->getRowDimension($summaryHeaderRow)->setRowHeight(25);
 
-                $sheet->getRowDimension($detailTitleRow)
-                    ->setRowHeight(24);
+                // Style Summary Data Rows
+                $summaryDataStart = $summaryHeaderRow + 1;
+                $summaryDataEnd = $summaryLastRow - 1;
 
-                $this->styleHeader(
-                    $sheet,
-                    "A{$detailHeaderRow}:{$detailLastColumn}{$detailHeaderRow}"
-                );
+                if ($summaryDataEnd >= $summaryDataStart) {
+                    for ($r = $summaryDataStart; $r <= $summaryDataEnd; $r++) {
+                        $sheet->getRowDimension($r)->setRowHeight(20);
+                    }
 
-                if ($detailLastRow >= $detailFirstRow) {
-                    $sheet->getStyle(
-                        "B{$detailFirstRow}:B{$detailLastRow}"
-                    )->getNumberFormat()
+                    // Format numbers (Cols B..Last)
+                    $sheet->getStyle("B{$summaryDataStart}:{$summaryLastColumn}{$summaryLastRow}")
+                        ->getNumberFormat()
+                        ->setFormatCode('#,##0;[Red]\(#,##0\);"-"');
+
+                    // Center column A (MONTH)
+                    $sheet->getStyle("A{$summaryDataStart}:A{$summaryDataEnd}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                    // Right-align numbers
+                    $sheet->getStyle("B{$summaryDataStart}:{$summaryLastColumn}{$summaryLastRow}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+                    // Hair borders on summary table data
+                    $sheet->getStyle("A{$summaryHeaderRow}:{$summaryLastColumn}{$summaryLastRow}")
+                        ->getBorders()
+                        ->getAllBorders()
+                        ->setBorderStyle(Border::BORDER_HAIR);
+                }
+
+                // Style Summary Grand Total
+                $this->styleGrandTotal($sheet, "A{$summaryLastRow}:{$summaryLastColumn}{$summaryLastRow}");
+                $sheet->getRowDimension($summaryLastRow)->setRowHeight(22);
+
+                // ==========================================
+                // 2. SPACING ROWS (BREATHING ROOM ANTAR TABEL)
+                // ==========================================
+                $spacingStartRow = $summaryLastRow + 1;
+                $spacingEndRow = $summaryLastRow + $spacingRowsCount;
+
+                for ($r = $spacingStartRow; $r <= $spacingEndRow; $r++) {
+                    $sheet->getRowDimension($r)->setRowHeight(18);
+                    $sheet->getStyle("A{$r}:{$summaryLastColumn}{$r}")
+                        ->getBorders()
+                        ->getAllBorders()
+                        ->setBorderStyle(Border::BORDER_NONE);
+                }
+
+                // ==========================================
+                // 3. TABLE 2: DETAIL OVK PER LOKASI, BULAN, DAN REKENING
+                // ==========================================
+                $detailTitleRow = $spacingEndRow + 1;
+                $sheet->setCellValue("A{$detailTitleRow}", $detailTitle);
+                $sheet->mergeCells("A{$detailTitleRow}:{$detailLastColumn}{$detailTitleRow}");
+                $this->styleSectionTitle($sheet, "A{$detailTitleRow}:{$detailLastColumn}{$detailTitleRow}", '4472C4');
+                $sheet->getRowDimension($detailTitleRow)->setRowHeight(26);
+
+                $detailHeaderRow = $detailTitleRow + 1;
+                $sheet->fromArray($detailRows, null, "A{$detailHeaderRow}");
+
+                $detailRowCount = count($detailRows);
+                $detailLastRow = $detailHeaderRow + $detailRowCount - 1;
+
+                // Style Detail Header
+                $this->styleHeader($sheet, "A{$detailHeaderRow}:{$detailLastColumn}{$detailHeaderRow}");
+                $sheet->getRowDimension($detailHeaderRow)->setRowHeight(25);
+
+                $detailDataStart = $detailHeaderRow + 1;
+                $detailDataEnd = $detailLastRow - 1;
+
+                if ($detailDataEnd >= $detailDataStart) {
+                    for ($r = $detailDataStart; $r <= $detailDataEnd; $r++) {
+                        $sheet->getRowDimension($r)->setRowHeight(20);
+                    }
+
+                    // Format numbers
+                    $sheet->getStyle("B{$detailDataStart}:B{$detailDataEnd}")
+                        ->getNumberFormat()
                         ->setFormatCode('0');
 
-                    $sheet->getStyle(
-                        "E{$detailFirstRow}:E{$detailLastRow}"
-                    )->getNumberFormat()
-                        ->setFormatCode(
-                            '#,##0;[Red]\(#,##0\);-'
-                        );
+                    $sheet->getStyle("E{$detailDataStart}:E{$detailLastRow}")
+                        ->getNumberFormat()
+                        ->setFormatCode('#,##0;[Red]\(#,##0\);"-"');
+
+                    // Alignments
+                    $sheet->getStyle("A{$detailDataStart}:A{$detailDataEnd}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                    $sheet->getStyle("B{$detailDataStart}:B{$detailDataEnd}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                    $sheet->getStyle("C{$detailDataStart}:C{$detailDataEnd}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                    $sheet->getStyle("D{$detailDataStart}:D{$detailDataEnd}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                    $sheet->getStyle("E{$detailDataStart}:E{$detailLastRow}")
+                        ->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+                    // Hair borders on detail table data
+                    $sheet->getStyle("A{$detailHeaderRow}:{$detailLastColumn}{$detailLastRow}")
+                        ->getBorders()
+                        ->getAllBorders()
+                        ->setBorderStyle(Border::BORDER_HAIR);
+
+                    // AutoFilter on detail data (excluding Grand Total)
+                    $sheet->setAutoFilter("A{$detailHeaderRow}:{$detailLastColumn}{$detailDataEnd}");
                 }
 
-                $this->styleGrandTotal(
-                    $sheet,
-                    "A{$detailLastRow}:{$detailLastColumn}{$detailLastRow}"
-                );
+                // Style Detail Grand Total
+                $this->styleGrandTotal($sheet, "A{$detailLastRow}:{$detailLastColumn}{$detailLastRow}");
+                $sheet->getRowDimension($detailLastRow)->setRowHeight(22);
 
+                // ==========================================
+                // 4. PROFESSIONAL COLUMN DIMENSIONS
+                // ==========================================
+                $sheet->getColumnDimension('A')->setWidth(28);
+                $sheet->getColumnDimension('B')->setWidth(20);
+                $sheet->getColumnDimension('C')->setWidth(20);
+                $sheet->getColumnDimension('D')->setWidth(44);
+                $sheet->getColumnDimension('E')->setWidth(24);
 
-                $sheet->getStyle(
-                    "A1:{$summaryLastColumn}{$summaryLastRow}"
-                )->getBorders()
-                    ->getAllBorders()
-                    ->setBorderStyle(
-                        Border::BORDER_HAIR
-                    );
-
-                $sheet->getStyle(
-                    "A{$detailHeaderRow}:{$detailLastColumn}{$detailLastRow}"
-                )->getBorders()
-                    ->getAllBorders()
-                    ->setBorderStyle(
-                        Border::BORDER_HAIR
-                    );
-
-
-                $sheet->getColumnDimension('A')
-                    ->setWidth(30);
-
-                for (
-                    $i = 2;
-                    $i <= count($summaryRows[0]);
-                    $i++
-                ) {
-                    $column =
-                        Coordinate::stringFromColumnIndex($i);
-
-                    $sheet->getColumnDimension($column)
-                        ->setWidth(22);
+                for ($i = 6; $i <= $summaryColCount; $i++) {
+                    $col = Coordinate::stringFromColumnIndex($i);
+                    $sheet->getColumnDimension($col)->setWidth(22);
                 }
-
-                $sheet->getColumnDimension('A')
-                    ->setWidth(32);
-
-                $sheet->getColumnDimension('B')
-                    ->setWidth(12);
-
-                $sheet->getColumnDimension('C')
-                    ->setWidth(20);
-
-                $sheet->getColumnDimension('D')
-                    ->setWidth(42);
-
-                $sheet->getColumnDimension('E')
-                    ->setWidth(22);
-
-                $sheet->setAutoFilter(
-                    "A{$detailHeaderRow}:{$detailLastColumn}" .
-                        ($detailLastRow - 1)
-                );
-
-                $sheet->freezePane('B2');
-
-
-                $sheet->getStyle(
-                    "A{$summaryHeaderRow}:{$summaryLastColumn}{$summaryHeaderRow}"
-                )->getAlignment()
-                    ->setHorizontal(
-                        Alignment::HORIZONTAL_CENTER
-                    );
-
-                $sheet->getStyle(
-                    "A{$detailHeaderRow}:{$detailLastColumn}{$detailHeaderRow}"
-                )->getAlignment()
-                    ->setHorizontal(
-                        Alignment::HORIZONTAL_CENTER
-                    );
-
-                $sheet->getStyle(
-                    "B{$detailFirstRow}:B{$detailLastRow}"
-                )->getAlignment()
-                    ->setHorizontal(
-                        Alignment::HORIZONTAL_CENTER
-                    );
-
-                $sheet->getStyle(
-                    "B2:{$summaryLastColumn}{$summaryLastRow}"
-                )->getAlignment()
-                    ->setHorizontal(
-                        Alignment::HORIZONTAL_RIGHT
-                    );
-
-                $sheet->getStyle(
-                    "E{$detailFirstRow}:E{$detailLastRow}"
-                )->getAlignment()
-                    ->setHorizontal(
-                        Alignment::HORIZONTAL_RIGHT
-                    );
             },
         ];
     }
 
-    private function styleHeader(
-        $sheet,
-        string $range
-    ): void {
-        $sheet->getStyle($range)
-            ->applyFromArray([
-                'font' => [
-                    'bold' => true,
-                    'size' => 10,
-                    'color' => [
-                        'rgb' => '000000',
-                    ],
-                ],
-                'alignment' => [
-                    'horizontal' =>
-                    Alignment::HORIZONTAL_CENTER,
-                    'vertical' =>
-                    Alignment::VERTICAL_CENTER,
-                    'wrapText' => true,
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => [
-                        'rgb' => 'D9E2F3',
-                    ],
-                ],
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' =>
-                        Border::BORDER_THIN,
-                        'color' => [
-                            'rgb' => 'B7B7B7',
-                        ],
-                    ],
-                ],
-            ]);
+    private function styleSectionTitle($sheet, string $range, string $bgColor = '2F5597'): void
+    {
+        $sheet->getStyle($range)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 11,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => $bgColor],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
     }
 
-    private function styleGrandTotal(
-        $sheet,
-        string $range
-    ): void {
-        $sheet->getStyle($range)
-            ->applyFromArray([
-                'font' => [
-                    'bold' => true,
+    private function styleHeader($sheet, string $range): void
+    {
+        $sheet->getStyle($range)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 10,
+                'color' => ['rgb' => '1F2937'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'D9E2F3'],
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '8EA9DB'],
                 ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => [
-                        'rgb' => 'D9E2F3',
-                    ],
+            ],
+        ]);
+    }
+
+    private function styleGrandTotal($sheet, string $range): void
+    {
+        $sheet->getStyle($range)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 10,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'E9EEF4'],
+            ],
+            'borders' => [
+                'top' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '8EA9DB'],
                 ],
-                'borders' => [
-                    'top' => [
-                        'borderStyle' =>
-                        Border::BORDER_DOUBLE,
-                        'color' => [
-                            'rgb' => '000000',
-                        ],
-                    ],
+                'bottom' => [
+                    'borderStyle' => Border::BORDER_DOUBLE,
+                    'color' => ['rgb' => '1F4E79'],
                 ],
-            ]);
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
     }
 }

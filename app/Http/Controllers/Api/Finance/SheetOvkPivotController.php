@@ -335,12 +335,16 @@ class SheetOvkPivotController extends Controller
             'month_from' => $monthFrom,
             'month_to' => $monthTo,
 
+            'table_spacing_rows' => 3,
+
+            'summary_title' => 'RINGKASAN OVK PER BULAN DAN LOKASI',
             'location_count' => count($locations),
             'locations' => $locations,
 
             'summary_rows' => $summaryRows,
             'summary_grand_total' => $grandTotalAll,
 
+            'detail_title' => 'DETAIL OVK PER LOKASI, BULAN, DAN REKENING',
             'detail_rows' => $detailRows,
             'detail_count' => $detailRecords->count(),
             'detail_grand_total' => $detailGrandTotal,

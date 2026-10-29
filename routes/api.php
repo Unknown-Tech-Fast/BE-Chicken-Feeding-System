@@ -146,4 +146,5 @@ Route::prefix('transaksi-ayam-bulanan')->group(function () {
 Route::prefix('finance')->group(function () {
     Route::get('/pivot/export/excel', [SheetAyamPivotController::class, 'export']);
     Route::get('/ovk/export-pivot', [SheetOvkPivotController::class, 'export']);
+    Route::get('/ovk/preview-pivot', [SheetOvkPivotController::class, 'preview']);
 });
