@@ -11,7 +11,7 @@ class TransaksiAyamBulanan extends Model
     protected $table = 'transaksi_ayam_bulanan';
 
     protected $fillable = [
-        'periode_id', 'kandang_id', 'master_ayam_id', 'flock_no', 'umur_minggu',
+        'periode_id', 'lokasi_id', 'kandang_id', 'master_ayam_id', 'flock_no', 'umur_minggu',
         'so_ekor', 'in_ekor', 'out_ekor', 'sa_ekor', 'mati_ekor',
         'jual_ekor', 'koreksi_ekor',
     ];

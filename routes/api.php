@@ -117,6 +117,15 @@ Route::prefix('master-lokasi')->group(function () {
 });
 
 Route::prefix('periode-closing')->group(function () {
+    Route::get('/aktif', [
+        PeriodeClosingController::class,
+        'aktif',
+    ]);
+
+    Route::post('/{periodeClosing}/closing', [
+        PeriodeClosingController::class,
+        'closing',
+    ])->whereNumber('periodeClosing');
     Route::get('/', [PeriodeClosingController::class, 'index']);
     Route::post('/', [PeriodeClosingController::class, 'store']);
     Route::get('/{periodeClosing}', [PeriodeClosingController::class, 'show']);
