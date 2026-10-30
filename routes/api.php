@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\UserRoleController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Finance\SheetAyamPivotController;
 use App\Http\Controllers\Api\Finance\SheetOvkPivotController;
+use App\Http\Controllers\Api\Finance\SheetPakanOvdPivotController;
 use App\Http\Controllers\Api\MasterAyam\MasterAyamController;
 use App\Http\Controllers\Api\MasterKandang\MasterKandangController;
 use App\Http\Controllers\Api\MasterLokasi\MasterLokasiController;
@@ -147,4 +148,6 @@ Route::prefix('finance')->group(function () {
     Route::get('/pivot/export/excel', [SheetAyamPivotController::class, 'export']);
     Route::get('/ovk/export-pivot', [SheetOvkPivotController::class, 'export']);
     Route::get('/ovk/preview-pivot', [SheetOvkPivotController::class, 'preview']);
+    Route::get('/pakan-ovd/export-pivot',[SheetPakanOvdPivotController::class, 'export']);
+    Route::get('/pakan-ovd/preview-pivot',[SheetPakanOvdPivotController::class, 'preview']);
 });

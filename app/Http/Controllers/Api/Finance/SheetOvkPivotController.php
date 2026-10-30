@@ -300,7 +300,6 @@ class SheetOvkPivotController extends Controller
                 'Akun Analitik/Akun Analitik',
                 'MONTH',
                 'Rekening/Kode',
-                'Rekening/Nama',
                 'Sum of MUTASI',
             ],
         ];
