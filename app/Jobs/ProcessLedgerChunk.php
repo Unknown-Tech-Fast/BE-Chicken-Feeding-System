@@ -179,84 +179,15 @@ class ProcessLedgerChunk implements ShouldQueue
                     [self::DEDUPLICATION_LOCK_ID]
                 );
 
-                $seenInChunk = [];
-                $rowsToInsert = [];
-                $duplicateErrors = [];
-                $skippedCount = 0;
-
-                foreach ($insertRows as $record) {
-                    $documentNumber = $this->normalizeDocumentNumber(
-                        $record['document_number'] ?? null
-                    );
-                    $transactionDate = $record['transaction_date'] ?? null;
-
-                    /*
-                     * Hanya kombinasi dengan kedua nilai terisi yang diperiksa.
-                     * Baris kosong tidak dianggap duplikat secara otomatis.
-                     */
-                    if ($documentNumber === null || $transactionDate === null) {
-                        $rowsToInsert[] = $record;
-                        continue;
-                    }
-
-                    $key = mb_strtolower($documentNumber) . '|' . $transactionDate;
-
-                    if (isset($seenInChunk[$key])) {
-                        $skippedCount++;
-                        $duplicateErrors[] = $this->makeError(
-                            (int) $record['source_row'],
-                            [],
-                            "Duplikat dalam file: document_number '{$documentNumber}' "
-                                . "dan transaction_date '{$transactionDate}'. Baris dilewati.",
-                            $now,
-                            'document_number,transaction_date'
-                        );
-                        continue;
-                    }
-
-                    $seenInChunk[$key] = true;
-
-                    /*
-                     * Cek semua import dan sheet yang sudah tersimpan.
-                     * Nomor dokumen sama dengan tanggal berbeda tetap boleh masuk.
-                     */
-                    $exists = GeneralLedgerEntry::query()
-                        ->whereRaw(
-                            'LOWER(BTRIM(document_number)) = ?',
-                            [mb_strtolower(trim($documentNumber))]
-                        )
-                        ->whereDate('transaction_date', $transactionDate)
-                        ->exists();
-
-                    if ($exists) {
-                        $skippedCount++;
-
-                        $duplicateErrors[] = $this->makeError(
-                            (int) $record['source_row'],
-                            [],
-                            "Duplikat: document_number '{$documentNumber}' "
-                                . "dan transaction_date '{$transactionDate}' sama.",
-                            $now,
-                            'document_number,transaction_date'
-                        );
-
-                        continue;
-                    }
-
-                    // Jika salah satu berbeda, baris tetap masuk.
-                    $rowsToInsert[] = $record;
-                }
+                $rowsToInsert = $insertRows;
 
                 /*
-                 * Hitung baris yang benar-benar berhasil disimpan.
-                 * insertOrIgnore dapat melewati baris yang melanggar constraint,
-                 * jadi jumlah sukses dihitung dengan memeriksa identitas source row
-                 * setelah insert, bukan count($rowsToInsert).
+                 * Simpan seluruh baris ke general_ledger_entries.
+                 * Gunakan insertOrIgnore untuk menjaga idempotensi jika chunk di-retry.
                  */
                 foreach (array_chunk($rowsToInsert, 300) as $batch) {
                     GeneralLedgerEntry::query()->insertOrIgnore($batch);
                 }
-
                 $successCount = 0;
 
                 foreach (array_chunk($rowsToInsert, 300) as $batch) {
@@ -278,7 +209,7 @@ class ProcessLedgerChunk implements ShouldQueue
                     count($rowsToInsert) - $successCount
                 );
 
-                $allErrors = array_merge($errorRows, $duplicateErrors);
+                $allErrors = $errorRows;
 
                 if ($insertFailureCount > 0) {
                     $validationErrorCount += $insertFailureCount;
@@ -324,8 +255,7 @@ class ProcessLedgerChunk implements ShouldQueue
                 $import->failed_rows =
                     (int) $import->failed_rows + $validationErrorCount;
 
-                $import->skipped_rows =
-                    (int) $import->skipped_rows + $skippedCount;
+                $import->skipped_rows = 0;
 
                 $import->processed_chunks = count($completedKeys);
 
