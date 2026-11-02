@@ -15,10 +15,15 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class SheetPakanOvdExport implements FromArray, WithEvents
 {
     private const NUM_FORMAT_CURRENCY = '#,##0;[Red]\(#,##0\);"-"';
+
     private const COLOR_NAVY_TITLE = '2F5597';
+
     private const COLOR_HEADER_BG = 'D9E2F3';
+
     private const COLOR_YELLOW_BG = 'FFFF00';
+
     private const COLOR_GRAND_TOTAL_BG = 'E9EEF4';
+
     private const COLOR_BORDER_BLUE = '8EA9DB';
 
     private array $payload;
@@ -87,7 +92,7 @@ class SheetPakanOvdExport implements FromArray, WithEvents
     private function renderPivot1(Worksheet $sheet, int $startRow): int
     {
         $pivot = $this->payload['pivot1'] ?? null;
-        if (!$pivot) {
+        if (! $pivot) {
             return $startRow;
         }
 
@@ -196,6 +201,56 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         $sheet->getStyle("A{$h1Row}:{$lastCol}{$currentRow}")
             ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_HAIR);
 
+        foreach ([
+            "A{$h1Row}:A{$h3Row}",
+            "{$pemakaianTotalCol}{$h1Row}:{$pemakaianTotalCol}{$h3Row}",
+            "{$pembelianTotalCol}{$h1Row}:{$pembelianTotalCol}{$h3Row}",
+            "{$grandTotalCol}{$h1Row}:{$grandTotalCol}{$h3Row}",
+        ] as $range) {
+            $sheet->unmergeCells($range);
+        }
+
+        foreach ([
+            "A{$h1Row}",
+            "A{$h2Row}",
+            "{$pemakaianTotalCol}{$h1Row}",
+            "{$pemakaianTotalCol}{$h2Row}",
+            "{$pembelianTotalCol}{$h1Row}",
+            "{$pembelianTotalCol}{$h2Row}",
+            "{$grandTotalCol}{$h1Row}",
+            "{$grandTotalCol}{$h2Row}",
+        ] as $cell) {
+            $sheet->setCellValue($cell, null);
+        }
+
+        $filterHeaders = ['BULAN'];
+        foreach ($coaAccounts as $name) {
+            $filterHeaders[] = 'PEMAKAIAN - '.$name;
+        }
+        $filterHeaders[] = 'PEMAKAIAN Total';
+        foreach ($coaAccounts as $name) {
+            $filterHeaders[] = 'PEMBELIAN - '.$name;
+        }
+        $filterHeaders[] = 'PEMBELIAN Total';
+        $filterHeaders[] = 'Grand Total';
+        $sheet->fromArray($filterHeaders, null, "A{$h3Row}");
+
+        if ($currentRow - 1 > $h3Row) {
+            ExcelFilterTable::add(
+                $sheet,
+                "A{$h3Row}:{$lastCol}".($currentRow - 1),
+                'PakanOvdMonthlyAccounts'
+            );
+            ExcelFilterTable::setSubtotalValues(
+                $sheet,
+                $currentRow,
+                $h3Row + 1,
+                $currentRow - 1,
+                'B',
+                $lastCol
+            );
+        }
+
         return $currentRow;
     }
 
@@ -205,7 +260,7 @@ class SheetPakanOvdExport implements FromArray, WithEvents
     private function renderPivot2(Worksheet $sheet, int $startRow): int
     {
         $pivot = $this->payload['pivot2'] ?? null;
-        if (!$pivot) {
+        if (! $pivot) {
             return $startRow;
         }
 
@@ -263,12 +318,12 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         // Header Level 2: Locations
         $colIdx = 4;
         foreach ($locations as $loc) {
-            $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx) . $h2Row, $loc);
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx).$h2Row, $loc);
             $colIdx++;
         }
         $colIdx++; // skip pemakaian total
         foreach ($locations as $loc) {
-            $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx) . $h2Row, $loc);
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($colIdx).$h2Row, $loc);
             $colIdx++;
         }
 
@@ -311,6 +366,56 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         $sheet->getStyle("A{$h1Row}:{$lastCol}{$currentRow}")
             ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_HAIR);
 
+        foreach ([
+            "A{$h1Row}:A{$h2Row}",
+            "B{$h1Row}:B{$h2Row}",
+            "C{$h1Row}:C{$h2Row}",
+            "{$pemakaianTotalCol}{$h1Row}:{$pemakaianTotalCol}{$h2Row}",
+            "{$pembelianTotalCol}{$h1Row}:{$pembelianTotalCol}{$h2Row}",
+            "{$grandTotalCol}{$h1Row}:{$grandTotalCol}{$h2Row}",
+        ] as $range) {
+            $sheet->unmergeCells($range);
+        }
+
+        foreach ([
+            "A{$h1Row}",
+            "B{$h1Row}",
+            "C{$h1Row}",
+            "{$pemakaianTotalCol}{$h1Row}",
+            "{$pembelianTotalCol}{$h1Row}",
+            "{$grandTotalCol}{$h1Row}",
+        ] as $cell) {
+            $sheet->setCellValue($cell, null);
+        }
+
+        $filterHeaders = ['MONTH', 'Rekening/Kode', 'Rekening/Nama'];
+        foreach ($locations as $location) {
+            $filterHeaders[] = 'PEMAKAIAN - '.$location;
+        }
+        $filterHeaders[] = 'PEMAKAIAN Total';
+        foreach ($locations as $location) {
+            $filterHeaders[] = 'PEMBELIAN - '.$location;
+        }
+        $filterHeaders[] = 'PEMBELIAN Total';
+        $filterHeaders[] = 'Grand Total';
+        $sheet->fromArray($filterHeaders, null, "A{$h2Row}");
+
+        if ($currentRow - 1 > $h2Row) {
+            ExcelFilterTable::add(
+                $sheet,
+                "A{$h2Row}:{$lastCol}".($currentRow - 1),
+                'PakanOvdByAccountAndLocation'
+            );
+            ExcelFilterTable::setSubtotalValues(
+                $sheet,
+                $currentRow,
+                $h2Row + 1,
+                $currentRow - 1,
+                'D',
+                $lastCol
+            );
+        }
+
         return $currentRow;
     }
 
@@ -320,7 +425,7 @@ class SheetPakanOvdExport implements FromArray, WithEvents
     private function renderPivot3(Worksheet $sheet, int $startRow): int
     {
         $pivot = $this->payload['pivot3'] ?? null;
-        if (!$pivot) {
+        if (! $pivot) {
             return $startRow;
         }
 
@@ -376,6 +481,22 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         $sheet->getStyle("A{$hRow}:{$lastCol}{$currentRow}")
             ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_HAIR);
 
+        if ($currentRow - 1 > $hRow) {
+            ExcelFilterTable::add(
+                $sheet,
+                "A{$hRow}:{$lastCol}".($currentRow - 1),
+                'PakanOvdAnalyticalAccounts'
+            );
+            ExcelFilterTable::setSubtotalValues(
+                $sheet,
+                $currentRow,
+                $hRow + 1,
+                $currentRow - 1,
+                'E',
+                $lastCol
+            );
+        }
+
         return $currentRow;
     }
 
@@ -385,12 +506,20 @@ class SheetPakanOvdExport implements FromArray, WithEvents
     private function renderPivot4(Worksheet $sheet, int $startRow): int
     {
         $pivot = $this->payload['pivot4'] ?? null;
-        if (!$pivot) {
+        if (! $pivot) {
             return $startRow;
         }
 
-        $headers = $pivot['headers'] ?? [];
-        $totalCols = count($headers); // 3 + 12 + 1 = 16
+        $dataRows = $pivot['data_rows'] ?? [];
+        $grandTotal = $pivot['grand_total'] ?? [];
+        $headers = [
+            'Partner Key',
+            'Kategori',
+            'Rekanan/Nama',
+            ...array_map('strval', range(1, 12)),
+            'Grand Total',
+        ];
+        $totalCols = count($headers);
         $lastCol = Coordinate::stringFromColumnIndex($totalCols);
 
         // --- Section Title ---
@@ -444,25 +573,18 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         $h1Row = $startRow + 4;
         $h2Row = $startRow + 5;
 
-        // Frozen identifiers merged over h1Row:h2Row
-        $sheet->mergeCells("C{$h1Row}:C{$h2Row}");
-        $sheet->setCellValue("C{$h1Row}", 'Rekanan/Nama');
-
         // "BULAN" merged over columns D..O (months 1-12)
         $monthStartCol = 'D';
         $monthEndCol = Coordinate::stringFromColumnIndex(15);
         $sheet->mergeCells("{$monthStartCol}{$h1Row}:{$monthEndCol}{$h1Row}");
         $sheet->setCellValue("{$monthStartCol}{$h1Row}", 'BULAN');
 
-        // Grand Total merged over last column
-        $sheet->mergeCells("{$lastCol}{$h1Row}:{$lastCol}{$h2Row}");
-        $sheet->setCellValue("{$lastCol}{$h1Row}", 'Grand Total');
+        $sheet->setCellValue("A{$h1Row}", null);
+        $sheet->setCellValue("B{$h1Row}", null);
+        $sheet->setCellValue("C{$h1Row}", null);
+        $sheet->setCellValue("{$lastCol}{$h1Row}", null);
 
-        // Header Level 2: month numbers 1..12 in row h2
-        for ($m = 1; $m <= 12; $m++) {
-            $col = Coordinate::stringFromColumnIndex(3 + $m);
-            $sheet->setCellValue("{$col}{$h2Row}", $m);
-        }
+        $sheet->fromArray($headers, null, "A{$h2Row}");
 
         // Style Yellow Header
         $sheet->getStyle("A{$h1Row}:{$lastCol}{$h2Row}")->applyFromArray([
@@ -491,7 +613,6 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         $sheet->getRowDimension($h2Row)->setRowHeight(25);
 
         // --- Data Rows ---
-        $dataRows = $pivot['data_rows'] ?? [];
         $currentRow = $h2Row + 1;
 
         foreach ($dataRows as $row) {
@@ -511,7 +632,6 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         }
 
         // --- Grand Total Row ---
-        $grandTotal = $pivot['grand_total'] ?? [];
         $sheet->fromArray($grandTotal, null, "A{$currentRow}");
         $sheet->getRowDimension($currentRow)->setRowHeight(22);
         $this->styleGrandTotal($sheet, "A{$currentRow}:{$lastCol}{$currentRow}");
@@ -523,6 +643,22 @@ class SheetPakanOvdExport implements FromArray, WithEvents
 
         $sheet->getStyle("A{$h1Row}:{$lastCol}{$currentRow}")
             ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_HAIR);
+
+        if ($currentRow - 1 > $h2Row) {
+            ExcelFilterTable::add(
+                $sheet,
+                "A{$h2Row}:{$lastCol}".($currentRow - 1),
+                'PakanOvdPartnerMonthlyPurchases'
+            );
+            ExcelFilterTable::setSubtotalValues(
+                $sheet,
+                $currentRow,
+                $h2Row + 1,
+                $currentRow - 1,
+                'D',
+                $lastCol
+            );
+        }
 
         return $currentRow;
     }

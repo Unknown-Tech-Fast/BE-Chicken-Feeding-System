@@ -48,7 +48,7 @@ class SheetAyamExport implements FromArray, WithEvents
                         );
 
                         $sheet->setCellValue(
-                            $column . ($rowIndex + 1),
+                            $column.($rowIndex + 1),
                             $value
                         );
                     }
@@ -76,11 +76,6 @@ class SheetAyamExport implements FromArray, WithEvents
                 );
 
                 $pivotLastRow = count($pivotRows);
-                foreach (['A', 'B', 'C'] as $column) {
-                    $sheet->mergeCells(
-                        "{$column}1:{$column}2"
-                    );
-                }
 
                 if ($locationCount > 1) {
                     $start = Coordinate::stringFromColumnIndex(
@@ -96,6 +91,28 @@ class SheetAyamExport implements FromArray, WithEvents
                     );
                 }
 
+                $sheet->setCellValue('A1', null);
+                $sheet->setCellValue('B1', null);
+                $sheet->setCellValue('C1', null);
+
+                $filterHeaders = [
+                    'MONTH',
+                    'MATI/JUAL',
+                    'MATI/JUAL Total',
+                ];
+
+                for ($i = $firstLocationColumn; $i <= $lastLocationColumn; $i++) {
+                    $location = $headerBottom[$i - 1] ?? '';
+                    $filterHeaders[] = 'PEMBELIAN - '.$location;
+                }
+
+                $filterHeaders[] = 'PEMBELIAN Total';
+                $filterHeaders[] = '(blank)';
+                $filterHeaders[] = '(blank) Total';
+                $filterHeaders[] = 'Grand Total';
+
+                $sheet->fromArray($filterHeaders, null, 'A2');
+
                 foreach ([
                     $pembelianTotalColumn,
                     $blankColumn,
@@ -106,9 +123,7 @@ class SheetAyamExport implements FromArray, WithEvents
                         $columnIndex
                     );
 
-                    $sheet->mergeCells(
-                        "{$column}1:{$column}2"
-                    );
+                    $sheet->setCellValue("{$column}1", null);
                 }
 
                 $sheet->getStyle(
@@ -169,6 +184,23 @@ class SheetAyamExport implements FromArray, WithEvents
                     ]);
                 }
 
+                $pivotDataLastRow = $pivotLastRow - 1;
+                if ($pivotDataLastRow >= 3) {
+                    ExcelFilterTable::add(
+                        $sheet,
+                        "A2:{$pivotLastColumn}{$pivotDataLastRow}",
+                        'AyamMonthlyTransactions'
+                    );
+                    ExcelFilterTable::setSubtotalValues(
+                        $sheet,
+                        $pivotLastRow,
+                        3,
+                        $pivotDataLastRow,
+                        'B',
+                        $pivotLastColumn
+                    );
+                }
+
                 $sheet->getColumnDimension('A')->setWidth(16);
                 $sheet->getColumnDimension('B')->setWidth(16);
                 $sheet->getColumnDimension('C')->setWidth(20);
@@ -222,7 +254,7 @@ class SheetAyamExport implements FromArray, WithEvents
                 $startMonthColumn + $month - 1
             );
 
-            $sheet->setCellValue($column . '2', $month);
+            $sheet->setCellValue($column.'2', $month);
         }
 
         $sheet->getStyle('AF1:AS2')->applyFromArray([
@@ -290,6 +322,7 @@ class SheetAyamExport implements FromArray, WithEvents
         }
 
         $lastRow = max($startRow, $rowIndex - 1);
+        $dataLastRow = $lastRow - 1;
 
         $sheet->getStyle(
             "AH{$startRow}:AS{$lastRow}"
@@ -329,6 +362,22 @@ class SheetAyamExport implements FromArray, WithEvents
         )->getBorders()->getTop()->setBorderStyle(
             Border::BORDER_THIN
         );
+
+        if ($dataLastRow >= $startRow) {
+            ExcelFilterTable::add(
+                $sheet,
+                "AF2:AS{$dataLastRow}",
+                'AyamPartnerMonthlySummary'
+            );
+            ExcelFilterTable::setSubtotalValues(
+                $sheet,
+                $lastRow,
+                $startRow,
+                $dataLastRow,
+                'AH',
+                'AS'
+            );
+        }
 
         $sheet->getColumnDimension('AF')->setWidth(32);
         $sheet->getColumnDimension('AG')->setWidth(48);

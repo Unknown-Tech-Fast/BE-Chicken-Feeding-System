@@ -38,7 +38,7 @@ class SheetOvkExport implements FromArray, WithEvents
                     return;
                 }
 
-                $summaryColCount = !empty($summaryRows[0]) ? count($summaryRows[0]) : 2;
+                $summaryColCount = ! empty($summaryRows[0]) ? count($summaryRows[0]) : 2;
                 $summaryLastColumn = Coordinate::stringFromColumnIndex($summaryColCount);
                 $detailLastColumn = 'E';
 
@@ -101,6 +101,20 @@ class SheetOvkExport implements FromArray, WithEvents
                         ->getBorders()
                         ->getAllBorders()
                         ->setBorderStyle(Border::BORDER_HAIR);
+
+                    ExcelFilterTable::add(
+                        $sheet,
+                        "A{$summaryHeaderRow}:{$summaryLastColumn}{$summaryDataEnd}",
+                        'OvkMonthlySummary'
+                    );
+                    ExcelFilterTable::setSubtotalValues(
+                        $sheet,
+                        $summaryLastRow,
+                        $summaryDataStart,
+                        $summaryDataEnd,
+                        'B',
+                        $summaryLastColumn
+                    );
                 }
 
                 // Style Summary Grand Total
@@ -184,8 +198,19 @@ class SheetOvkExport implements FromArray, WithEvents
                         ->getAllBorders()
                         ->setBorderStyle(Border::BORDER_HAIR);
 
-                    // AutoFilter on detail data (excluding Grand Total)
-                    $sheet->setAutoFilter("A{$detailHeaderRow}:{$detailLastColumn}{$detailDataEnd}");
+                    ExcelFilterTable::add(
+                        $sheet,
+                        "A{$detailHeaderRow}:{$detailLastColumn}{$detailDataEnd}",
+                        'OvkTransactionDetails'
+                    );
+                    ExcelFilterTable::setSubtotalValues(
+                        $sheet,
+                        $detailLastRow,
+                        $detailDataStart,
+                        $detailDataEnd,
+                        'E',
+                        'E'
+                    );
                 }
 
                 // Style Detail Grand Total
