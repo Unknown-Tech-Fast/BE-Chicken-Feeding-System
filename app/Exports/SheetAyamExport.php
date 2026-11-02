@@ -31,7 +31,7 @@ class SheetAyamExport implements FromArray, WithEvents
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                $sheet->setTitle('AYAM');
+                $sheet->setTitle('AYAM Transaksi');
                 $headerTop = $this->payload['header_top'] ?? [];
                 $headerBottom = $this->payload['header_bottom'] ?? [];
                 $exportRows = $this->payload['export_rows'] ?? [];
@@ -228,9 +228,12 @@ class SheetAyamExport implements FromArray, WithEvents
                     $sheet->getColumnDimension($column)->setWidth(20);
                 }
 
-                $this->writeRekapBulanan($sheet);
+                $rekapSheet = $sheet->getParent()->createSheet();
+                $rekapSheet->setTitle('AYAM Rekap Bulanan');
+                $this->writeRekapBulanan($rekapSheet);
 
                 $sheet->freezePane('B3');
+                $sheet->getParent()->setActiveSheetIndex(0);
             },
         ];
     }
@@ -239,25 +242,21 @@ class SheetAyamExport implements FromArray, WithEvents
     {
         $rekapRows = $this->payload['rekap_rows'] ?? [];
 
-        $colNpwp = 'AF';
-        $colPartner = 'AG';
-        $startMonthColumn = 34; // AH
-
-        $sheet->mergeCells('AH1:AS1');
-        $sheet->setCellValue('AH1', 'BULAN');
-
-        $sheet->setCellValue('AF2', 'NAMA NPWP');
-        $sheet->setCellValue('AG2', 'Rekanan/Nama');
+        $colNpwp = 'A';
+        $colPartner = 'B';
+        $startMonthColumn = 3;
 
         for ($month = 1; $month <= 12; $month++) {
             $column = Coordinate::stringFromColumnIndex(
                 $startMonthColumn + $month - 1
             );
 
-            $sheet->setCellValue($column.'2', $month);
+            $sheet->setCellValue($column.'1', (string) $month);
         }
 
-        $sheet->getStyle('AF1:AS2')->applyFromArray([
+        $sheet->setCellValue('A1', 'NAMA NPWP');
+        $sheet->setCellValue('B1', 'Rekanan/Nama');
+        $sheet->getStyle('A1:N1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'size' => 10,
@@ -283,7 +282,7 @@ class SheetAyamExport implements FromArray, WithEvents
             ],
         ]);
 
-        $startRow = 3;
+        $startRow = 2;
         $rowIndex = $startRow;
 
         foreach ($rekapRows as $rekapRow) {
@@ -325,40 +324,40 @@ class SheetAyamExport implements FromArray, WithEvents
         $dataLastRow = $lastRow - 1;
 
         $sheet->getStyle(
-            "AH{$startRow}:AS{$lastRow}"
+            "C{$startRow}:N{$lastRow}"
         )->getNumberFormat()->setFormatCode(
             '#,##0;[Red](#,##0);-'
         );
 
         $sheet->getStyle(
-            "AF2:AS{$lastRow}"
+            "A1:N{$lastRow}"
         )->getBorders()->getAllBorders()
             ->setBorderStyle(Border::BORDER_HAIR);
 
         $sheet->getStyle(
-            "AF3:AG{$lastRow}"
+            "A{$startRow}:B{$lastRow}"
         )->getAlignment()->setHorizontal(
             Alignment::HORIZONTAL_LEFT
         );
 
         $sheet->getStyle(
-            "AF3:AS{$lastRow}"
+            "A{$startRow}:N{$lastRow}"
         )->getAlignment()->setVertical(
             Alignment::VERTICAL_CENTER
         );
 
         $sheet->getStyle(
-            "AH3:AS{$lastRow}"
+            "C{$startRow}:N{$lastRow}"
         )->getAlignment()->setHorizontal(
             Alignment::HORIZONTAL_RIGHT
         );
 
         $sheet->getStyle(
-            "AF{$lastRow}:AS{$lastRow}"
+            "A{$lastRow}:N{$lastRow}"
         )->getFont()->setBold(true);
 
         $sheet->getStyle(
-            "AF{$lastRow}:AS{$lastRow}"
+            "A{$lastRow}:N{$lastRow}"
         )->getBorders()->getTop()->setBorderStyle(
             Border::BORDER_THIN
         );
@@ -366,7 +365,7 @@ class SheetAyamExport implements FromArray, WithEvents
         if ($dataLastRow >= $startRow) {
             ExcelFilterTable::add(
                 $sheet,
-                "AF2:AS{$dataLastRow}",
+                "A1:N{$dataLastRow}",
                 'AyamPartnerMonthlySummary'
             );
             ExcelFilterTable::setSubtotalValues(
@@ -374,13 +373,13 @@ class SheetAyamExport implements FromArray, WithEvents
                 $lastRow,
                 $startRow,
                 $dataLastRow,
-                'AH',
-                'AS'
+                'C',
+                'N'
             );
         }
 
-        $sheet->getColumnDimension('AF')->setWidth(32);
-        $sheet->getColumnDimension('AG')->setWidth(48);
+        $sheet->getColumnDimension('A')->setWidth(32);
+        $sheet->getColumnDimension('B')->setWidth(48);
 
         for ($month = 1; $month <= 12; $month++) {
             $column = Coordinate::stringFromColumnIndex(

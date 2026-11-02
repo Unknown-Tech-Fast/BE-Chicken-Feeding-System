@@ -29,7 +29,8 @@ class SheetOvkExport implements FromArray, WithEvents
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $sheet->setTitle('OVK');
+                $sheet->setTitle('OVK Ringkasan');
+                $summarySheet = $sheet;
 
                 $summaryRows = $this->payload['summary_rows'] ?? [];
                 $detailRows = $this->payload['detail_rows'] ?? [];
@@ -44,11 +45,6 @@ class SheetOvkExport implements FromArray, WithEvents
 
                 $summaryTitle = $this->payload['summary_title'] ?? 'RINGKASAN OVK PER BULAN DAN LOKASI';
                 $detailTitle = $this->payload['detail_title'] ?? 'DETAIL OVK PER LOKASI, BULAN, DAN REKENING';
-                $spacingRowsCount = (int) ($this->payload['table_spacing_rows'] ?? 3);
-                if ($spacingRowsCount < 2) {
-                    $spacingRowsCount = 3;
-                }
-
                 // ==========================================
                 // 1. TABLE 1: RINGKASAN OVK PER BULAN & LOKASI
                 // ==========================================
@@ -122,23 +118,20 @@ class SheetOvkExport implements FromArray, WithEvents
                 $sheet->getRowDimension($summaryLastRow)->setRowHeight(22);
 
                 // ==========================================
-                // 2. SPACING ROWS (BREATHING ROOM ANTAR TABEL)
+                // 2. TABLE 2: DETAIL OVK PER LOKASI, BULAN, DAN REKENING
                 // ==========================================
-                $spacingStartRow = $summaryLastRow + 1;
-                $spacingEndRow = $summaryLastRow + $spacingRowsCount;
-
-                for ($r = $spacingStartRow; $r <= $spacingEndRow; $r++) {
-                    $sheet->getRowDimension($r)->setRowHeight(18);
-                    $sheet->getStyle("A{$r}:{$summaryLastColumn}{$r}")
-                        ->getBorders()
-                        ->getAllBorders()
-                        ->setBorderStyle(Border::BORDER_NONE);
+                $summarySheet->getColumnDimension('A')->setWidth(28);
+                for ($i = 2; $i <= $summaryColCount; $i++) {
+                    $summarySheet->getColumnDimension(
+                        Coordinate::stringFromColumnIndex($i)
+                    )->setWidth(22);
                 }
 
-                // ==========================================
-                // 3. TABLE 2: DETAIL OVK PER LOKASI, BULAN, DAN REKENING
-                // ==========================================
-                $detailTitleRow = $spacingEndRow + 1;
+                $detailSheet = $summarySheet->getParent()->createSheet();
+                $detailSheet->setTitle('OVK Detail');
+                $sheet = $detailSheet;
+
+                $detailTitleRow = 1;
                 $sheet->setCellValue("A{$detailTitleRow}", $detailTitle);
                 $sheet->mergeCells("A{$detailTitleRow}:{$detailLastColumn}{$detailTitleRow}");
                 $this->styleSectionTitle($sheet, "A{$detailTitleRow}:{$detailLastColumn}{$detailTitleRow}", '4472C4');
@@ -228,7 +221,7 @@ class SheetOvkExport implements FromArray, WithEvents
 
                 for ($i = 6; $i <= $summaryColCount; $i++) {
                     $col = Coordinate::stringFromColumnIndex($i);
-                    $sheet->getColumnDimension($col)->setWidth(22);
+                    $summarySheet->getColumnDimension($col)->setWidth(22);
                 }
             },
         ];

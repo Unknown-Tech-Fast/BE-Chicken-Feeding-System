@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class SheetOvkExportTest extends TestCase
 {
-    public function test_exported_ovk_sheet_has_filterable_summary_and_detail_tables(): void
+    public function test_exported_ovk_tables_are_filterable_on_separate_sheets(): void
     {
         $export = new SheetOvkExport([
             'summary_rows' => [
@@ -33,32 +33,55 @@ class SheetOvkExportTest extends TestCase
         ]);
 
         $workbook = $this->openWorkbook($export);
-        $sheet = $workbook->getSheetByName('OVK');
-        $tables = array_values(iterator_to_array($sheet->getTableCollection()));
+        $summarySheet = $workbook->getSheetByName('OVK Ringkasan');
+        $detailSheet = $workbook->getSheetByName('OVK Detail');
+        $summaryTables = array_values(
+            iterator_to_array($summarySheet->getTableCollection())
+        );
+        $detailTables = array_values(
+            iterator_to_array($detailSheet->getTableCollection())
+        );
 
+        $this->assertSame(2, $workbook->getSheetCount());
         $this->assertSame(
-            ['A2:C3', 'A9:E10'],
-            array_map(fn ($table) => $table->getRange(), $tables)
+            ['A2:C3'],
+            array_map(fn ($table) => $table->getRange(), $summaryTables)
         );
         $this->assertSame(
-            ['A2:C3', 'A9:E10'],
+            ['A2:C3'],
             array_map(
                 fn ($table) => $table->getAutoFilter()->getRange(),
-                $tables
+                $summaryTables
             )
         );
         $this->assertSame(
+            ['A2:E3'],
+            array_map(fn ($table) => $table->getRange(), $detailTables)
+        );
+        $this->assertSame(
             'Rekening/Nama',
-            $sheet->getCell('D9')->getValue()
+            $detailSheet->getCell('D2')->getValue()
         );
         $this->assertSame(
             'Sum of MUTASI',
-            $sheet->getCell('E9')->getValue()
+            $detailSheet->getCell('E2')->getValue()
         );
-        $this->assertSame('Grand Total', $sheet->getCell('A4')->getValue());
-        $this->assertSame('Grand Total', $sheet->getCell('A11')->getValue());
-        $this->assertSame('=SUBTOTAL(9,B3:B3)', $sheet->getCell('B4')->getValue());
-        $this->assertSame('=SUBTOTAL(9,E10:E10)', $sheet->getCell('E11')->getValue());
+        $this->assertSame(
+            'Grand Total',
+            $summarySheet->getCell('A4')->getValue()
+        );
+        $this->assertSame(
+            'Grand Total',
+            $detailSheet->getCell('A4')->getValue()
+        );
+        $this->assertSame(
+            '=SUBTOTAL(9,B3:B3)',
+            $summarySheet->getCell('B4')->getValue()
+        );
+        $this->assertSame(
+            '=SUBTOTAL(9,E3:E3)',
+            $detailSheet->getCell('E4')->getValue()
+        );
     }
 
     private function openWorkbook(SheetOvkExport $export): Spreadsheet

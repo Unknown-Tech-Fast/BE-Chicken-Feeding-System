@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class SheetAyamExportTest extends TestCase
 {
-    public function test_exported_ayam_sheet_has_filterable_transaction_and_partner_tables(): void
+    public function test_exported_ayam_tables_are_filterable_on_separate_sheets(): void
     {
         $export = new SheetAyamExport([
             'header_top' => [
@@ -36,36 +36,43 @@ class SheetAyamExportTest extends TestCase
         ]);
 
         $workbook = $this->openWorkbook($export);
-        $sheet = $workbook->getSheetByName('AYAM');
-        $tables = array_values(iterator_to_array($sheet->getTableCollection()));
+        $transactionSheet = $workbook->getSheetByName('AYAM Transaksi');
+        $monthlySheet = $workbook->getSheetByName('AYAM Rekap Bulanan');
+        $transactionTables = array_values(
+            iterator_to_array($transactionSheet->getTableCollection())
+        );
+        $monthlyTables = array_values(
+            iterator_to_array($monthlySheet->getTableCollection())
+        );
 
+        $this->assertSame(2, $workbook->getSheetCount());
         $this->assertSame(
-            ['A2:H3', 'AF2:AS3'],
-            array_map(fn ($table) => $table->getRange(), $tables)
+            ['A2:H3'],
+            array_map(fn ($table) => $table->getRange(), $transactionTables)
         );
         $this->assertSame(
-            ['A2:H3', 'AF2:AS3'],
+            ['A1:N2'],
             array_map(
                 fn ($table) => $table->getAutoFilter()->getRange(),
-                $tables
+                $monthlyTables
             )
         );
         $this->assertSame(
             'PEMBELIAN - Farm A',
-            $sheet->getCell('D2')->getValue()
+            $transactionSheet->getCell('D2')->getValue()
         );
         $this->assertSame(
             'Grand Total',
-            $sheet->getCell('A4')->getValue()
+            $transactionSheet->getCell('A4')->getValue()
         );
         $this->assertSame(
             'Grand Total',
-            $sheet->getCell('AF4')->getValue()
+            $monthlySheet->getCell('A3')->getValue()
         );
-        $this->assertSame('=SUBTOTAL(9,B3:B3)', $sheet->getCell('B4')->getValue());
+        $this->assertSame('=SUBTOTAL(9,B3:B3)', $transactionSheet->getCell('B4')->getValue());
         $this->assertSame(
-            '=SUBTOTAL(9,AH3:AH3)',
-            $sheet->getCell('AH4')->getValue()
+            '=SUBTOTAL(9,C2:C2)',
+            $monthlySheet->getCell('C3')->getValue()
         );
     }
 

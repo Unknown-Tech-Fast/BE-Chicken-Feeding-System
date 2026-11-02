@@ -46,42 +46,25 @@ class SheetPakanOvdExport implements FromArray, WithEvents
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $sheet->setTitle('PAKAN.OVD');
+                $spreadsheet = $sheet->getParent();
+                $sheet->setTitle('PAKAN Akun Bulanan');
                 $sheet->setShowGridLines(true);
 
-                $currentRow = 1;
-
-                // =========================================================================
-                // 1. PIVOT 1: MUTASI BULANAN PER AKUN
-                // =========================================================================
-                $currentRow = $this->renderPivot1($sheet, $currentRow);
-
-                // Breathing room spacing rows
-                $currentRow += 3;
-
-                // =========================================================================
-                // 2. PIVOT 2: MUTASI PER BULAN, AKUN, DAN LOKASI FARM
-                // =========================================================================
-                $currentRow = $this->renderPivot2($sheet, $currentRow);
-
-                // Breathing room spacing rows
-                $currentRow += 3;
-
-                // =========================================================================
-                // 3. PIVOT 3: AKUN ANALITIK PER BULAN DAN TIPE INTERNAL
-                // =========================================================================
-                $currentRow = $this->renderPivot3($sheet, $currentRow);
-
-                // Breathing room spacing rows
-                $currentRow += 3;
-
-                // =========================================================================
-                // 4. PIVOT 4: REKAP PEMBELIAN PER REKANAN / PARTNER BULANAN
-                // =========================================================================
-                $currentRow = $this->renderPivot4($sheet, $currentRow);
-
-                // Default column dimension adjustments
+                $this->renderPivot1($sheet, 1);
                 $this->adjustColumnDimensions($sheet);
+                $sheet = $spreadsheet->createSheet();
+                $sheet->setTitle('PAKAN Akun Lokasi');
+                $this->renderPivot2($sheet, 1);
+                $this->adjustColumnDimensions($sheet);
+                $sheet = $spreadsheet->createSheet();
+                $sheet->setTitle('PAKAN Analitik');
+                $this->renderPivot3($sheet, 1);
+                $this->adjustColumnDimensions($sheet);
+                $sheet = $spreadsheet->createSheet();
+                $sheet->setTitle('PAKAN Rekap Rekanan');
+                $this->renderPivot4($sheet, 1);
+                $this->adjustColumnDimensions($sheet);
+                $spreadsheet->setActiveSheetIndex(0);
             },
         ];
     }
